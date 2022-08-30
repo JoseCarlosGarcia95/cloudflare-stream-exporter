@@ -43,7 +43,7 @@ type cfResponseStreamingAnalyticsResp struct {
 
 var (
 	// Requests
-	cfStreamingMinutesViewed = promauto.NewCounterVec(prometheus.CounterOpts{
+	cfStreamingMinutesViewed = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cloudflare_streaming_minutes_viewed",
 		Help: "Number of minutes viewed by a user",
 	}, []string{"account"},
