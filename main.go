@@ -115,7 +115,7 @@ func fetchStreamingAnalytics(account cloudflare.Account) {
 
 	for _, a := range r.Viewer.Accounts {
 		for _, b := range a.AccountStreamMinutesViewedAdaptiveGroupsSum {
-			cfStreamingMinutesViewed.With(prometheus.Labels{"account": account.Name}).Add(float64(b.Sum.MinutesViewed))
+			cfStreamingMinutesViewed.With(prometheus.Labels{"account": account.Name}).Set(float64(b.Sum.MinutesViewed))
 		}
 	}
 }
