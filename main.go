@@ -119,8 +119,13 @@ func fetchStreamingAnalytics(account cloudflare.Account) {
 	}
 
 	for _, a := range r.Viewer.Accounts {
-		latestObservation := a.AccountStreamMinutesViewedAdaptiveGroupsSum[len(a.AccountStreamMinutesViewedAdaptiveGroupsSum)-1]
-		cfStreamingMinutesViewed.With(prometheus.Labels{"account": account.Name}).Set(float64(latestObservation.Sum.MinutesViewed))
+		sum := 0
+
+		for _, b := range a.AccountStreamMinutesViewedAdaptiveGroupsSum {
+			sum += int(b.Sum.MinutesViewed)
+		}
+
+		cfStreamingMinutesViewed.With(prometheus.Labels{"account": account.Name}).Set(float64(sum) / float64(len(a.AccountStreamMinutesViewedAdaptiveGroupsSum)))
 	}
 }
 
