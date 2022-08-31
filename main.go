@@ -38,6 +38,9 @@ type cfResponseStreamingAnalyticsResp struct {
 		Sum struct {
 			MinutesViewed uint64 `json:"minutesViewed"`
 		} `json:"sum"`
+		Dimensions struct {
+			Ts time.Time `json:"ts"`
+		} `json:"dimensions"`
 	} `json:"streamMinutesViewedAdaptiveGroups"`
 }
 
@@ -70,18 +73,20 @@ func fetchAccounts() []cloudflare.Account {
 }
 
 func fetchStreamingTotals(accountID string) (*cfResponseStreamingAnalytics, error) {
-	now := time.Now().Add(-time.Duration(30) * time.Second).UTC()
-	s := 60 * time.Second
-	now = now.Truncate(s)
-	now30mAgo := now.Add(-24 * time.Hour)
+	now := time.Now()
+	now30mAgo := now.Add(-30 * time.Minute)
 
 	request := graphql.NewRequest(`
 	query ($accountID: String!, $mintime: Time!, $maxtime: Time!) {
 		viewer {
 			accounts(filter: {accountTag: $accountID} ) {
-				streamMinutesViewedAdaptiveGroups(limit: 1, filter: { datetime_geq: $mintime, datetime_lt: $maxtime}) {
+				streamMinutesViewedAdaptiveGroups(limit: 1000, orderBy: [sum_minutesViewed_DESC], filter: { datetime_geq: $mintime, datetime_lt: $maxtime}) {
 					sum {
 						minutesViewed
+					}
+
+					dimensions {
+						ts: datetimeFiveMinutes
 					}
 				}
 			}
@@ -114,9 +119,8 @@ func fetchStreamingAnalytics(account cloudflare.Account) {
 	}
 
 	for _, a := range r.Viewer.Accounts {
-		for _, b := range a.AccountStreamMinutesViewedAdaptiveGroupsSum {
-			cfStreamingMinutesViewed.With(prometheus.Labels{"account": account.Name}).Set(float64(b.Sum.MinutesViewed))
-		}
+		latestObservation := a.AccountStreamMinutesViewedAdaptiveGroupsSum[len(a.AccountStreamMinutesViewedAdaptiveGroupsSum)-1]
+		cfStreamingMinutesViewed.With(prometheus.Labels{"account": account.Name}).Set(float64(latestObservation.Sum.MinutesViewed))
 	}
 }
 
